@@ -18,7 +18,12 @@ export const useSessionStats = () => {
   useEffect(() => {
     const saved = StorageService.loadSessionStats();
     if (saved) {
-      setSessionStats((prev) => ({ ...prev, ...saved }));
+      // Fix: Ensure startTime is always a Date object
+      const processedSaved = {
+        ...saved,
+        startTime: saved.startTime ? new Date(saved.startTime) : new Date(),
+      };
+      setSessionStats((prev) => ({ ...prev, ...processedSaved }));
     }
   }, []);
 
@@ -27,16 +32,24 @@ export const useSessionStats = () => {
   }, [sessionStats]);
 
   const updateStats = useCallback((progress, recognizedWords, totalWords) => {
-    setSessionStats((prev) => ({
-      ...prev,
-      averageAccuracy:
-        (prev.averageAccuracy * prev.completedSections + progress) /
-        (prev.completedSections + 1),
-      bestAccuracy: Math.max(prev.bestAccuracy, progress),
-      totalWords: prev.totalWords + totalWords,
-      recognizedWords: prev.recognizedWords + recognizedWords,
-      sessionDuration: Date.now() - prev.startTime.getTime(),
-    }));
+    setSessionStats((prev) => {
+      // Fix: Ensure startTime is a Date object before calling getTime()
+      const startTime =
+        prev.startTime instanceof Date
+          ? prev.startTime
+          : new Date(prev.startTime);
+
+      return {
+        ...prev,
+        averageAccuracy:
+          (prev.averageAccuracy * prev.completedSections + progress) /
+          (prev.completedSections + 1),
+        bestAccuracy: Math.max(prev.bestAccuracy, progress),
+        totalWords: prev.totalWords + totalWords,
+        recognizedWords: prev.recognizedWords + recognizedWords,
+        sessionDuration: Date.now() - startTime.getTime(),
+      };
+    });
   }, []);
 
   const completeSection = useCallback(() => {
