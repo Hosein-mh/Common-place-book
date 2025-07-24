@@ -1,52 +1,62 @@
-import { useState, useCallback } from "react";
+// src/hooks/useSessionStats.js
+import { useState, useEffect, useCallback } from "react";
+import { StorageService } from "../services/StorageService";
 
 export const useSessionStats = () => {
   const [sessionStats, setSessionStats] = useState({
-    startTime: Date.now(),
-    sectionsCompleted: 0,
-    accuracyHistory: [],
-    bestAccuracy: 0,
+    totalSections: 0,
+    completedSections: 0,
     averageAccuracy: 0,
+    bestAccuracy: 0,
     totalWords: 0,
     recognizedWords: 0,
+    sessionDuration: 0,
+    startTime: new Date(),
+    sectionStats: [],
   });
 
-  const updateStats = useCallback(
-    (accuracy, wordsRecognized = 0, totalWords = 0) => {
-      setSessionStats((prev) => {
-        const newHistory = [...prev.accuracyHistory.slice(-19), accuracy];
-        const newAverage =
-          newHistory.reduce((a, b) => a + b) / newHistory.length;
+  useEffect(() => {
+    const saved = StorageService.loadSessionStats();
+    if (saved) {
+      setSessionStats((prev) => ({ ...prev, ...saved }));
+    }
+  }, []);
 
-        return {
-          ...prev,
-          accuracyHistory: newHistory,
-          bestAccuracy: Math.max(prev.bestAccuracy, accuracy),
-          averageAccuracy: newAverage,
-          totalWords: prev.totalWords + totalWords,
-          recognizedWords: prev.recognizedWords + wordsRecognized,
-        };
-      });
-    },
-    []
-  );
+  useEffect(() => {
+    StorageService.saveSessionStats(sessionStats);
+  }, [sessionStats]);
+
+  const updateStats = useCallback((progress, recognizedWords, totalWords) => {
+    setSessionStats((prev) => ({
+      ...prev,
+      averageAccuracy:
+        (prev.averageAccuracy * prev.completedSections + progress) /
+        (prev.completedSections + 1),
+      bestAccuracy: Math.max(prev.bestAccuracy, progress),
+      totalWords: prev.totalWords + totalWords,
+      recognizedWords: prev.recognizedWords + recognizedWords,
+      sessionDuration: Date.now() - prev.startTime.getTime(),
+    }));
+  }, []);
 
   const completeSection = useCallback(() => {
     setSessionStats((prev) => ({
       ...prev,
-      sectionsCompleted: prev.sectionsCompleted + 1,
+      completedSections: prev.completedSections + 1,
     }));
   }, []);
 
   const resetStats = useCallback(() => {
     setSessionStats({
-      startTime: Date.now(),
-      sectionsCompleted: 0,
-      accuracyHistory: [],
-      bestAccuracy: 0,
+      totalSections: 0,
+      completedSections: 0,
       averageAccuracy: 0,
+      bestAccuracy: 0,
       totalWords: 0,
       recognizedWords: 0,
+      sessionDuration: 0,
+      startTime: new Date(),
+      sectionStats: [],
     });
   }, []);
 

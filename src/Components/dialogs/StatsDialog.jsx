@@ -9,12 +9,105 @@ import {
   Paper,
   Typography,
   Box,
+  LinearProgress,
+  Card,
+  CardContent,
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Divider
 } from "@mui/material";
-import { Analytics } from "@mui/icons-material";
+import { 
+  Analytics, 
+  TrendingUp, 
+  Timer, 
+  CheckCircle, 
+  Speed,
+  EmojiEvents,
+  School,
+  Mic
+} from "@mui/icons-material";
 import { useSessionStats } from "../../hooks/useSessionStats";
+import { useScript } from "../../contexts/ScriptContext";
+import { formatTime, formatPercentage } from "../../utils/helpers";
 
 export const StatsDialog = ({ open, onClose }) => {
   const { sessionStats } = useSessionStats();
+  const { scriptData, currentSectionIndex } = useScript();
+
+  const statsCards = [
+    {
+      title: "دقت میانگین",
+      value: `${Math.round(sessionStats.averageAccuracy || 0)}%`,
+      icon: <TrendingUp />,
+      color: "primary",
+      progress: sessionStats.averageAccuracy || 0
+    },
+    {
+      title: "بهترین عملکرد", 
+      value: `${Math.round(sessionStats.bestAccuracy || 0)}%`,
+      icon: <EmojiEvents />,
+      color: "success",
+      progress: sessionStats.bestAccuracy || 0
+    },
+    {
+      title: "بخش‌های تکمیل شده",
+      value: `${sessionStats.completedSections}/${scriptData.sections.length}`,
+      icon: <CheckCircle />,
+      color: "info",
+      progress: (sessionStats.completedSections / scriptData.sections.length) * 100
+    },
+    {
+      title: "زمان تمرین",
+      value: formatTime(sessionStats.sessionDuration || 0),
+      icon: <Timer />,
+      color: "warning",
+      showProgress: false
+    },
+    {
+      title: "کل کلمات",
+      value: sessionStats.totalWords || 0,
+      icon: <Mic />,
+      color: "secondary",
+      showProgress: false
+    },
+    {
+      title: "کلمات تشخیص داده شده",
+      value: sessionStats.recognizedWords || 0,
+      icon: <Speed />,
+      color: "error", 
+      progress: sessionStats.totalWords > 0 ? (sessionStats.recognizedWords / sessionStats.totalWords) * 100 : 0
+    }
+  ];
+
+  const achievements = [
+    {
+      title: "شروع قوی",
+      description: "اولین بخش را تکمیل کردید",
+      earned: sessionStats.completedSections > 0,
+      icon: "🚀"
+    },
+    {
+      title: "دقت بالا",
+      description: "دقت بالای 80% کسب کردید",
+      earned: sessionStats.bestAccuracy > 80,
+      icon: "🎯"
+    },
+    {
+      title: "پایداری",
+      description: "بیش از 5 دقیقه تمرین کردید",
+      earned: sessionStats.sessionDuration > 300000,
+      icon: "⏰"
+    },
+    {
+      title: "تسلط",
+      description: "نیمی از بخش‌ها را تکمیل کردید",
+      earned: sessionStats.completedSections >= scriptData.sections.length / 2,
+      icon: "👑"
+    }
+  ];
 
   return (
     <Dialog
@@ -22,116 +115,177 @@ export const StatsDialog = ({ open, onClose }) => {
       onClose={onClose}
       maxWidth="lg"
       fullWidth
-      PaperProps={{ sx: { borderRadius: 3 } }}
+      PaperProps={{ 
+        sx: { 
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white'
+        } 
+      }}
     >
       <DialogTitle>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Analytics />
-          آمار تفصیلی جلسه
+          <Typography variant="h5" fontWeight="bold">
+            آمار تفصیلی جلسه
+          </Typography>
         </Box>
       </DialogTitle>
-      <DialogContent>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, textAlign: "center" }}>
-              <Typography variant="h3" color="primary" gutterBottom>
-                {Math.round(sessionStats.averageAccuracy)}%
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                میانگین دقت کلی
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, textAlign: "center" }}>
-              <Typography variant="h3" color="success.main" gutterBottom>
-                {Math.round(sessionStats.bestAccuracy)}%
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                بهترین عملکرد
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, textAlign: "center" }}>
-              <Typography variant="h4" color="info.main" gutterBottom>
-                {sessionStats.sectionsCompleted}
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                بخش‌های تکمیل شده
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, textAlign: "center" }}>
-              <Typography variant="h4" color="warning.main" gutterBottom>
-                {sessionStats.totalWords}
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                کل کلمات گفته شده
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, textAlign: "center" }}>
-              <Typography variant="h4" color="error.main" gutterBottom>
-                {Math.round((Date.now() - sessionStats.startTime) / 60000)}
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                دقیقه تمرین
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                روند پیشرفت (آخرین 10 بخش)
-              </Typography>
-              <Box
-                sx={{ height: 200, display: "flex", alignItems: "end", gap: 1 }}
-              >
-                {sessionStats.accuracyHistory
-                  .slice(-10)
-                  .map((accuracy, index) => (
-                    <Box
-                      key={index}
-                      sx={{
-                        flex: 1,
-                        bgcolor: "primary.main",
-                        borderRadius: 1,
-                        height: `${accuracy}%`,
-                        minHeight: 4,
-                        opacity: 0.8,
-                        transition: "all 0.3s ease",
-                        "&:hover": {
-                          opacity: 1,
-                          transform: "scaleY(1.1)",
-                        },
-                      }}
-                      title={`${Math.round(accuracy)}%`}
+
+      <DialogContent sx={{ background: 'rgba(255,255,255,0.95)', color: 'text.primary', m: 2, borderRadius: 2 }}>
+        {/* Main Stats Cards */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {statsCards.map((stat, index) => (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <Card sx={{ height: '100%', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <Box sx={{ color: `${stat.color}.main` }}>
+                      {stat.icon}
+                    </Box>
+                    <Typography variant="h6" fontWeight="bold">
+                      {stat.title}
+                    </Typography>
+                  </Box>
+                  
+                  <Typography variant="h3" color={`${stat.color}.main`} gutterBottom fontWeight="bold">
+                    {stat.value}
+                  </Typography>
+                  
+                  {stat.showProgress !== false && (
+                    <LinearProgress
+                      variant="determinate"
+                      value={stat.progress || 0}
+                      color={stat.color}
+                      sx={{ height: 8, borderRadius: 4 }}
                     />
-                  ))}
-              </Box>
-              {sessionStats.accuracyHistory.length === 0 && (
-                <Box
-                  sx={{
-                    height: 200,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+
+        {/* Achievements Section */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <EmojiEvents color="warning" />
+            دستاورد‌ها
+          </Typography>
+          <Grid container spacing={2}>
+            {achievements.map((achievement, index) => (
+              <Grid item xs={12} sm={6} key={index}>
+                <Card 
+                  sx={{ 
+                    opacity: achievement.earned ? 1 : 0.5,
+                    background: achievement.earned 
+                      ? 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)' 
+                      : 'linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%)',
+                    color: achievement.earned ? 'white' : 'text.secondary'
                   }}
                 >
-                  <Typography variant="body2" color="text.secondary">
-                    هنوز داده‌ای برای نمایش وجود ندارد
-                  </Typography>
-                </Box>
-              )}
-            </Paper>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Typography variant="h4">{achievement.icon}</Typography>
+                      <Box>
+                        <Typography variant="h6" fontWeight="bold">
+                          {achievement.title}
+                        </Typography>
+                        <Typography variant="body2">
+                          {achievement.description}
+                        </Typography>
+                      </Box>
+                      {achievement.earned && (
+                        <CheckCircle sx={{ ml: 'auto', color: 'success.contrastText' }} />
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
-        </Grid>
+        </Box>
+
+        {/* Session Details */}
+        <Paper sx={{ p: 3, background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)' }}>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <School color="primary" />
+            جزئیات جلسه
+          </Typography>
+          <List>
+            <ListItem>
+              <ListItemIcon><Timer color="primary" /></ListItemIcon>
+              <ListItemText 
+                primary="زمان شروع جلسه" 
+                secondary={new Date(sessionStats.startTime).toLocaleString('fa-IR')}
+              />
+            </ListItem>
+            <Divider />
+            <ListItem>
+              <ListItemIcon><CheckCircle color="success" /></ListItemIcon>
+              <ListItemText 
+                primary="بخش فعلی" 
+                secondary={`بخش ${currentSectionIndex + 1}: ${scriptData.sections[currentSectionIndex]?.title}`}
+              />
+            </ListItem>
+            <Divider />
+            <ListItem>
+              <ListItemIcon><Analytics color="info" /></ListItemIcon>
+              <ListItemText 
+                primary="نرخ موفقیت کلی"
+                secondary={`${formatPercentage((sessionStats.completedSections / scriptData.sections.length) * 100)}`}
+              />
+            </ListItem>
+          </List>
+        </Paper>
+
+        {/* Tips for Improvement */}
+        <Box sx={{ mt: 3, p: 3, background: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)', borderRadius: 2 }}>
+          <Typography variant="h6" gutterBottom color="warning.main">
+            💡 پیشنهادات بهبود
+          </Typography>
+          <List dense>
+            {sessionStats.averageAccuracy < 70 && (
+              <ListItem>
+                <Typography variant="body2">
+                  • سعی کنید آهسته‌تر و واضح‌تر صحبت کنید
+                </Typography>
+              </ListItem>
+            )}
+            {sessionStats.completedSections < 3 && (
+              <ListItem>
+                <Typography variant="body2">
+                  • با تمرین بیشتر، سرعت پیشرفت شما افزایش می‌یابد
+                </Typography>
+              </ListItem>
+            )}
+            {sessionStats.sessionDuration < 180000 && (
+              <ListItem>
+                <Typography variant="body2">
+                  • برای نتایج بهتر، زمان بیشتری را به تمرین اختصاص دهید
+                </Typography>
+              </ListItem>
+            )}
+            <ListItem>
+              <Typography variant="body2">
+                • از قسمت تنظیمات می‌توانید حساسیت تشخیص صوت را تنظیم کنید
+              </Typography>
+            </ListItem>
+          </List>
+        </Box>
       </DialogContent>
-      <DialogActions sx={{ p: 3 }}>
-        <Button onClick={onClose} variant="contained">
+
+      <DialogActions sx={{ p: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+        <Button 
+          onClick={onClose} 
+          variant="contained" 
+          size="large"
+          sx={{ 
+            background: 'rgba(255,255,255,0.2)', 
+            color: 'white',
+            '&:hover': { background: 'rgba(255,255,255,0.3)' }
+          }}
+        >
           بستن
         </Button>
       </DialogActions>

@@ -10,41 +10,48 @@ import {
 import {
   Settings,
   Analytics,
-  DarkMode,
-  LightMode,
-  Visibility,
+  Brightness4,
+  Brightness7,
+  Language,
+  Menu,
 } from "@mui/icons-material";
 import { useTheme } from "../../contexts/ThemeContext";
 
 export const AppBar = ({
   onSettingsClick,
   onStatsClick,
-  onFocusModeToggle,
-  focusMode,
+  onMenuClick,
+  title = "خواننده اسکریپت صوتی",
 }) => {
-  const { isDarkMode, toggleDarkMode } = useTheme();
+  const { isDarkMode, toggleDarkMode, isRTL, toggleRTL } = useTheme();
 
   return (
     <MuiAppBar position="sticky" elevation={2}>
       <Toolbar>
-        <Typography
-          variant="h6"
-          component="div"
-          sx={{ flexGrow: 1, fontWeight: 600 }}
+        <IconButton
+          edge="start"
+          color="inherit"
+          aria-label="menu"
+          onClick={onMenuClick}
+          sx={{ mr: 2 }}
         >
-          🎙️ خواننده اسکریپت صوتی
+          <Menu />
+        </IconButton>
+
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          {title}
         </Typography>
 
         <Box sx={{ display: "flex", gap: 1 }}>
-          <Tooltip title="تغییر حالت">
-            <IconButton color="inherit" onClick={toggleDarkMode}>
-              {isDarkMode ? <LightMode /> : <DarkMode />}
+          <Tooltip title="تغییر زبان">
+            <IconButton color="inherit" onClick={toggleRTL}>
+              <Language />
             </IconButton>
           </Tooltip>
 
-          <Tooltip title="تنظیمات">
-            <IconButton color="inherit" onClick={onSettingsClick}>
-              <Settings />
+          <Tooltip title={isDarkMode ? "حالت روشن" : "حالت تاریک"}>
+            <IconButton color="inherit" onClick={toggleDarkMode}>
+              {isDarkMode ? <Brightness7 /> : <Brightness4 />}
             </IconButton>
           </Tooltip>
 
@@ -54,9 +61,9 @@ export const AppBar = ({
             </IconButton>
           </Tooltip>
 
-          <Tooltip title="حالت تمرکز">
-            <IconButton color="inherit" onClick={onFocusModeToggle}>
-              <Visibility />
+          <Tooltip title="تنظیمات">
+            <IconButton color="inherit" onClick={onSettingsClick}>
+              <Settings />
             </IconButton>
           </Tooltip>
         </Box>
@@ -64,3 +71,4 @@ export const AppBar = ({
     </MuiAppBar>
   );
 };
+

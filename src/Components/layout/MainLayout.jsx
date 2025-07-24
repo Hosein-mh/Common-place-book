@@ -1,5 +1,6 @@
+// src/components/layout/MainLayout.jsx - Complete Implementation
 import React, { useState, useCallback } from "react";
-import { Container, Grid, CssBaseline } from "@mui/material";
+import { Container, Grid, Box, useMediaQuery } from "@mui/material";
 import { AppBar } from "../common/AppBar";
 import { FloatingActionButton } from "../common/FloatingActionButton";
 import { NotificationSnackbar } from "../common/NotificationSnackbar";
@@ -25,11 +26,16 @@ import { TextProcessor } from "../../services/TextProcessor";
 
 // Contexts
 import { useScript } from "../../contexts/ScriptContext";
+import { useTheme } from "../../contexts/ThemeContext";
 
 export const MainLayout = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { theme } = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   // Hooks
   const { settings } = useSettings();
@@ -50,6 +56,8 @@ export const MainLayout = () => {
     currentSectionIndex,
     updateProgress,
     goToNextSection,
+    scriptData,
+    matchedWords,
   } = useScript();
 
   // Voice processing callback
@@ -60,7 +68,7 @@ export const MainLayout = () => {
       const result = TextProcessor.processRecognizedText(
         recognizedText,
         currentSection.text,
-        currentSection.keywords,
+        currentSection.keywords || [],
         settings.confidenceThreshold
       );
 
@@ -75,13 +83,21 @@ export const MainLayout = () => {
         setTimeout(() => {
           goToNextSection();
           completeSection();
-          showSuccess("پیشرفت خوب! به بخش بعدی رفتیم 🎉");
-        }, 1500);
+          showSuccess("پیشرفت خوب! به بخش بعدی می‌رویم 🎉");
+        }, 2000);
+      }
+
+      // Audio feedback
+      if (settings.audioFeedback && result.matchedWords.length > 0) {
+        // Play success sound or provide haptic feedback
+        if ("vibrate" in navigator) {
+          navigator.vibrate(100);
+        }
       }
     },
     [
-      currentSection,
       settings,
+      currentSection,
       updateProgress,
       updateStats,
       goToNextSection,
@@ -90,90 +106,165 @@ export const MainLayout = () => {
     ]
   );
 
-  // Voice streamer
+  // Voice streaming
   const {
     isRecording,
-    audioLevel,
-    liveTranscript,
-    finalTranscript,
-    confidence,
+    transcript,
     startRecording,
     stopRecording,
-  } = useVoiceStreamer(settings.language, handleTextProcessed, showError);
+    handleLanguageChange,
+  } = useVoiceStreamer(settings, handleTextProcessed);
 
-  // Text-to-speech
-  const handleSpeakSection = useCallback(() => {
-    if ("speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(currentSection.text);
-      utterance.lang = settings.language;
-      utterance.rate = settings.speakingRate;
-      utterance.pitch = 1;
-      speechSynthesis.speak(utterance);
-    }
-  }, [currentSection.text, settings.language, settings.speakingRate]);
+  const handleSettingsOpen = () => setShowSettings(true);
+  const handleStatsOpen = () => setShowStats(true);
+  const handleMenuClick = () => setSidebarOpen(!sidebarOpen);
 
-  // Language change handler
-  const handleLanguageChange = useCallback(
-    (language) => {
-      // Language change is handled by the voice streamer hook
-      showSuccess(`زبان به ${language} تغییر کرد`);
-    },
-    [showSuccess]
-  );
+  const toggleFocusMode = () => setFocusMode(!focusMode);
 
   return (
-    <>
-      <CssBaseline />
-
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       {/* App Bar */}
       <AppBar
-        onSettingsClick={() => setShowSettings(true)}
-        onStatsClick={() => setShowStats(true)}
-        onFocusModeToggle={() => setFocusMode(!focusMode)}
-        focusMode={focusMode}
+        onSettingsClick={handleSettingsOpen}
+        onStatsClick={handleStatsOpen}
+        onMenuClick={handleMenuClick}
+        title={scriptData?.scriptInfo?.title || "خواننده اسکریپت صوتی"}
       />
 
+      {/* Main Content */}
       <Container maxWidth="xl" sx={{ py: 3 }}>
-        {/* Header */}
-        <ScriptHeader />
-
-        {/* Recording Indicator */}
-        <RecordingIndicator isRecording={isRecording} audioLevel={audioLevel} />
-
-        {/* Progress Bars */}
-        <ProgressBars />
-
-        {/* Quick Stats (if not in focus mode) */}
-        {!focusMode && <QuickStats confidence={confidence} />}
-
-        {/* Main Content */}
         <Grid container spacing={3}>
-          {/* Script Content */}
-          <Grid item xs={12} lg={8}>
-            <ScriptContent
-              onSpeakSection={handleSpeakSection}
-              finalTranscript={finalTranscript}
-            />
+          {/* Sidebar - Left/Right based on RTL */}
+          {!focusMode && !isMobile && (
+            <Grid item xs={12} lg={3}>
+              <Box className="animate-slide-in">
+                <LiveTranscript
+                  transcript={transcript}
+                  isRecording={isRecording}
+                  matchedWords={Array.from(matchedWords)}
+                />
+                <NavigationPanel />
+                <QuickStats />
+                <QuickActions
+                  onNotification={showSuccess}
+                  onError={showError}
+                />
+              </Box>
+            </Grid>
+          )}
+
+          {/* Main Content Area */}
+          <Grid item xs={12} lg={focusMode ? 12 : 9}>
+            <Box className="animate-fade-in">
+              {/* Script Header */}
+              <ScriptHeader />
+
+              {/* Recording Status */}
+              <RecordingIndicator
+                isRecording={isRecording}
+                transcript={transcript}
+              />
+
+              {/* Progress Indicators */}
+              <ProgressBars />
+
+              {/* Main Script Content */}
+              <ScriptContent />
+
+              {/* Focus Mode Toggle */}
+              <Box
+                sx={{
+                  position: "fixed",
+                  top: "50%",
+                  right: focusMode ? 16 : -40,
+                  transform: "translateY(-50%)",
+                  transition: "all 0.3s ease",
+                  zIndex: 1200,
+                  opacity: focusMode ? 1 : 0.7,
+                  "&:hover": { opacity: 1, right: 16 },
+                }}
+              >
+                <Box
+                  onClick={toggleFocusMode}
+                  sx={{
+                    p: 1,
+                    bgcolor: "primary.main",
+                    color: "primary.contrastText",
+                    borderRadius: "12px 0 0 12px",
+                    cursor: "pointer",
+                    writingMode: "vertical-lr",
+                    textOrientation: "mixed",
+                    fontSize: "0.75rem",
+                    fontWeight: "bold",
+                    boxShadow: 3,
+                    "&:hover": {
+                      bgcolor: "primary.dark",
+                    },
+                  }}
+                >
+                  {focusMode ? "نمایش کامل" : "حالت تمرکز"}
+                </Box>
+              </Box>
+            </Box>
           </Grid>
 
-          {/* Sidebar */}
-          <Grid item xs={12} lg={4}>
-            {/* Live Transcript */}
-            <LiveTranscript
-              liveTranscript={liveTranscript}
-              finalTranscript={finalTranscript}
-              isRecording={isRecording}
-              confidence={confidence}
-            />
+          {/* Mobile Sidebar - Bottom Sheet Style */}
+          {isMobile && sidebarOpen && (
+            <Box
+              sx={{
+                position: "fixed",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: "60vh",
+                bgcolor: "background.paper",
+                borderRadius: "20px 20px 0 0",
+                zIndex: 1300,
+                p: 2,
+                overflow: "auto",
+                boxShadow: 24,
+                transform: sidebarOpen ? "translateY(0)" : "translateY(100%)",
+                transition: "transform 0.3s ease",
+              }}
+              className="custom-scrollbar"
+            >
+              <Box
+                sx={{
+                  width: 40,
+                  height: 4,
+                  bgcolor: "divider",
+                  borderRadius: 2,
+                  mx: "auto",
+                  mb: 2,
+                }}
+              />
 
-            {/* Navigation Panel */}
-            <NavigationPanel />
-
-            {/* Quick Actions (if not in focus mode) */}
-            {!focusMode && (
+              <LiveTranscript
+                transcript={transcript}
+                isRecording={isRecording}
+                matchedWords={Array.from(matchedWords)}
+              />
+              <NavigationPanel />
+              <QuickStats />
               <QuickActions onNotification={showSuccess} onError={showError} />
-            )}
-          </Grid>
+            </Box>
+          )}
+
+          {/* Mobile Overlay */}
+          {isMobile && sidebarOpen && (
+            <Box
+              sx={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                bgcolor: "rgba(0, 0, 0, 0.5)",
+                zIndex: 1200,
+              }}
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
         </Grid>
       </Container>
 
@@ -207,32 +298,6 @@ export const MainLayout = () => {
         onHideNotification={hideNotification}
         onHideError={hideError}
       />
-    </>
+    </Box>
   );
-};
-
-// utils/constants.js
-export const VOICE_LANGUAGES = {
-  "fa-IR": "فارسی",
-  "en-US": "English",
-  "ar-SA": "العربية",
-};
-
-export const DEFAULT_SETTINGS = {
-  autoAdvance: true,
-  autoAdvanceThreshold: 75,
-  speakingRate: 0.8,
-  confidenceThreshold: 0.7,
-  showKeywords: true,
-  showNotes: true,
-  language: "fa-IR",
-  continuousRecording: true,
-  audioFeedback: true,
-};
-
-export const STORAGE_KEYS = {
-  SETTINGS: "voiceAppSettings",
-  BOOKMARKS: "scriptBookmarks",
-  SCRIPT: "lastImportedScript",
-  DARK_MODE: "darkMode",
 };

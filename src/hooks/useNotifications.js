@@ -8,14 +8,21 @@ export const useNotifications = () => {
   const showSuccess = useCallback((message) => {
     setNotification(message);
     setShowNotification(true);
+    setTimeout(() => {
+      setShowNotification(false);
+    }, 4000);
   }, []);
 
   const showError = useCallback((message) => {
     setError(message);
+    setTimeout(() => {
+      setError("");
+    }, 6000);
   }, []);
 
   const hideNotification = useCallback(() => {
     setShowNotification(false);
+    setNotification("");
   }, []);
 
   const hideError = useCallback(() => {

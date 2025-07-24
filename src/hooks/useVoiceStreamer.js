@@ -1,84 +1,89 @@
-import { useState, useEffect, useCallback } from "react";
-import { VoiceStreamer } from "../services/VoiceStreamer";
+import { useState, useEffect, useRef, useCallback } from "react";
 
-export const useVoiceStreamer = (language, onTextProcessed, onError) => {
-  const [voiceStreamer, setVoiceStreamer] = useState(null);
+export const useVoiceStreamer = (settings, onTextProcessed) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
-  const [liveTranscript, setLiveTranscript] = useState("");
-  const [finalTranscript, setFinalTranscript] = useState("");
-  const [confidence, setConfidence] = useState(0);
+  const [transcript, setTranscript] = useState("");
+  const recognitionRef = useRef(null);
 
   useEffect(() => {
-    const handleVoiceResult = (result) => {
-      if (result.type === "audio-level") {
-        setAudioLevel(result.audioLevel);
-        return;
-      }
+    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+      const SpeechRecognition =
+        window.webkitSpeechRecognition || window.SpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
 
-      if (result.interim) {
-        setLiveTranscript(result.text);
-      } else {
-        setFinalTranscript((prev) => prev + " " + result.text);
-        setLiveTranscript("");
-        onTextProcessed(result.text, result.confidence);
-      }
+      const recognition = recognitionRef.current;
+      recognition.continuous = settings.continuousRecording;
+      recognition.interimResults = true;
+      recognition.lang = settings.language || "fa-IR";
 
-      setConfidence(result.confidence || 0);
-    };
+      recognition.onresult = (event) => {
+        let finalTranscript = "";
+        let interimTranscript = "";
 
-    const handleVoiceError = (error) => {
-      onError(error);
-      setIsRecording(false);
-    };
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            finalTranscript += result[0].transcript;
+          } else {
+            interimTranscript += result[0].transcript;
+          }
+        }
 
-    const streamer = new VoiceStreamer(
-      handleVoiceResult,
-      handleVoiceError,
-      language
-    );
-    setVoiceStreamer(streamer);
+        setTranscript(finalTranscript + interimTranscript);
+
+        if (finalTranscript && onTextProcessed) {
+          onTextProcessed(
+            finalTranscript,
+            event.results[event.results.length - 1][0].confidence
+          );
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        setIsRecording(false);
+      };
+
+      recognition.onend = () => {
+        if (isRecording && settings.continuousRecording) {
+          recognition.start();
+        }
+      };
+    }
 
     return () => {
-      if (streamer) {
-        streamer.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
       }
     };
-  }, [language, onTextProcessed, onError]);
+  }, [settings, onTextProcessed, isRecording]);
 
-  const startRecording = useCallback(async () => {
-    if (voiceStreamer) {
-      try {
-        await voiceStreamer.start();
-        setIsRecording(true);
-      } catch (error) {
-        onError("خطا در شروع ضبط: " + error.message);
-      }
+  const startRecording = useCallback(() => {
+    if (recognitionRef.current) {
+      setTranscript("");
+      setIsRecording(true);
+      recognitionRef.current.start();
     }
-  }, [voiceStreamer, onError]);
+  }, []);
 
   const stopRecording = useCallback(() => {
-    if (voiceStreamer) {
-      voiceStreamer.stop();
+    if (recognitionRef.current) {
       setIsRecording(false);
-      setAudioLevel(0);
+      recognitionRef.current.stop();
     }
-  }, [voiceStreamer]);
+  }, []);
 
-  const resetTranscript = useCallback(() => {
-    setLiveTranscript("");
-    setFinalTranscript("");
-    setConfidence(0);
+  const handleLanguageChange = useCallback((newLanguage) => {
+    if (recognitionRef.current) {
+      recognitionRef.current.lang = newLanguage;
+    }
   }, []);
 
   return {
     isRecording,
-    audioLevel,
-    liveTranscript,
-    finalTranscript,
-    confidence,
+    transcript,
     startRecording,
     stopRecording,
-    resetTranscript,
+    handleLanguageChange,
   };
 };

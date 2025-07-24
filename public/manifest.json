@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "خواننده اسکریپت",
+  "name": "خواننده اسکریپت صوتی - Voice Script Reader",
+  "description": "یک برنامه پیشرفته برای تمرین خواندن اسکریپت با تشخیص صوت و بازخورد هوشمند",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +11,63 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#1976d2",
+  "background_color": "#f5f7fa",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "fa",
+  "dir": "rtl",
+  "categories": ["education", "productivity", "utilities"],
+  "screenshots": [
+    {
+      "src": "screenshot1.png",
+      "type": "image/png",
+      "sizes": "1280x720",
+      "form_factor": "wide"
+    },
+    {
+      "src": "screenshot2.png", 
+      "type": "image/png",
+      "sizes": "750x1334",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "شروع تمرین جدید",
+      "short_name": "تمرین جدید",
+      "description": "شروع یک جلسه تمرین جدید",
+      "url": "/?action=new-session",
+      "icons": [
+        {
+          "src": "icon-new-session.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "آمار و گزارش",
+      "short_name": "آمار",
+      "description": "مشاهده آمار و پیشرفت",
+      "url": "/?action=stats",
+      "icons": [
+        {
+          "src": "icon-stats.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
 }

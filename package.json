@@ -1,18 +1,31 @@
 {
-  "name": "script-reader",
-  "version": "0.1.0",
+  "name": "voice-script-reader",
+  "version": "1.0.0",
   "private": true,
+  "description": "A comprehensive voice script reading application with real-time speech recognition",
+  "keywords": [
+    "react",
+    "voice-recognition",
+    "speech-to-text",
+    "script-reader",
+    "persian",
+    "rtl",
+    "material-ui"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
-    "@emotion/cache": "^11.11.0",
-    "@emotion/react": "^11.11.0",
-    "@emotion/styled": "^11.11.0",
-    "@mui/icons-material": "^5.14.0",
-    "@mui/material": "^5.14.0",
-    "lucide-react": "^0.525.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^5.16.10",
+    "@mui/material": "^5.16.10",
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-scripts": "5.0.1",
-    "stylis": "^4.3.0",
+    "stylis": "^4.3.6",
     "stylis-plugin-rtl": "^2.1.1",
     "web-vitals": "^2.1.4"
   },
@@ -20,13 +33,23 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint src/**/*.{js,jsx}",
+    "lint:fix": "eslint src/**/*.{js,jsx} --fix",
+    "format": "prettier --write src/**/*.{js,jsx,css,md}",
+    "analyze": "npm run build && npx bundle-analyzer build/static/js/*.js"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "no-unused-vars": "warn",
+      "no-console": "warn",
+      "prefer-const": "error",
+      "react-hooks/exhaustive-deps": "warn"
+    }
   },
   "browserslist": {
     "production": [
@@ -41,8 +64,21 @@
     ]
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^5.16.4",
-    "@testing-library/react": "^13.3.0",
-    "@testing-library/user-event": "^13.5.0"
-  }
+    "@types/react": "^18.3.23",
+    "@types/react-dom": "^18.3.7",
+    "eslint": "^8.57.1",
+    "prettier": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/voice-script-reader.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/voice-script-reader/issues"
+  },
+  "homepage": "https://yourusername.github.io/voice-script-reader"
 }

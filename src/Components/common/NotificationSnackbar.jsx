@@ -1,6 +1,10 @@
+// src/components/common/NotificationSnackbar.jsx
 import React from "react";
-import { Snackbar, Alert } from "@mui/material";
-import { useTheme } from "../../contexts/ThemeContext";
+import { Snackbar, Alert, AlertTitle, Slide } from "@mui/material";
+
+const SlideTransition = (props) => {
+  return <Slide {...props} direction="up" />;
+};
 
 export const NotificationSnackbar = ({
   notification,
@@ -9,37 +13,41 @@ export const NotificationSnackbar = ({
   onHideNotification,
   onHideError,
 }) => {
-  const { isRTL } = useTheme();
-
   return (
     <>
-      {/* Success Notification */}
+      {/* Success/Info Notifications */}
       <Snackbar
         open={showNotification}
-        autoHideDuration={3000}
+        autoHideDuration={4000}
         onClose={onHideNotification}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: isRTL ? "left" : "right",
-        }}
+        TransitionComponent={SlideTransition}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           onClose={onHideNotification}
           severity="success"
+          variant="filled"
           sx={{ width: "100%" }}
         >
           {notification}
         </Alert>
       </Snackbar>
 
-      {/* Error Notification */}
+      {/* Error Notifications */}
       <Snackbar
         open={!!error}
-        autoHideDuration={5000}
+        autoHideDuration={6000}
         onClose={onHideError}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        TransitionComponent={SlideTransition}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert onClose={onHideError} severity="error" sx={{ width: "100%" }}>
+        <Alert
+          onClose={onHideError}
+          severity="error"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          <AlertTitle>خطا</AlertTitle>
           {error}
         </Alert>
       </Snackbar>
