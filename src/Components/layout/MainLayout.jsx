@@ -1,6 +1,14 @@
-// src/components/layout/MainLayout.jsx - Complete Implementation
+// src/Components/layout/MainLayout.jsx - Complete Fixed Implementation
 import React, { useState, useCallback } from "react";
-import { Container, Grid, Box, useMediaQuery } from "@mui/material";
+import {
+  Container,
+  Grid,
+  Box,
+  useMediaQuery,
+  Typography,
+  Button,
+  Chip,
+} from "@mui/material";
 import { AppBar } from "../common/AppBar";
 import { FloatingActionButton } from "../common/FloatingActionButton";
 import { NotificationSnackbar } from "../common/NotificationSnackbar";
@@ -27,6 +35,98 @@ import { TextProcessor } from "../../services/TextProcessor";
 // Contexts
 import { useScript } from "../../contexts/ScriptContext";
 import { useTheme } from "../../contexts/ThemeContext";
+
+// New component for recording status
+const RecordingStatusIndicator = ({ isRecording, sessionState, onResume }) => {
+  if (
+    !isRecording &&
+    sessionState.pausedAt &&
+    sessionState.sectionProgress > 0
+  ) {
+    return (
+      <Box
+        sx={{
+          mb: 2,
+          p: 2,
+          backgroundColor: "warning.light",
+          borderRadius: 2,
+          border: 1,
+          borderColor: "warning.main",
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Box>
+            <Typography variant="h6" color="warning.dark">
+              ضبط متوقف شده
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              پیشرفت ذخیره شده: {Math.round(sessionState.sectionProgress)}%
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              متوقف شده در:{" "}
+              {new Date(sessionState.pausedAt).toLocaleTimeString("fa-IR")}
+            </Typography>
+          </Box>
+          <Button
+            onClick={onResume}
+            variant="contained"
+            color="success"
+            size="small"
+            sx={{ minWidth: 120 }}
+          >
+            ادامه ضبط
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (isRecording) {
+    return (
+      <Box
+        sx={{
+          mb: 2,
+          p: 2,
+          backgroundColor: "success.light",
+          borderRadius: 2,
+          border: 1,
+          borderColor: "success.main",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box
+            sx={{
+              width: 12,
+              height: 12,
+              backgroundColor: "error.main",
+              borderRadius: "50%",
+              animation: "pulse 1.5s infinite",
+            }}
+          />
+          <Typography variant="h6" color="success.dark">
+            در حال ضبط...
+          </Typography>
+          {sessionState.isResuming && (
+            <Chip
+              label="ادامه از موقعیت قبلی"
+              size="small"
+              color="info"
+              variant="outlined"
+            />
+          )}
+        </Box>
+      </Box>
+    );
+  }
+
+  return null;
+};
 
 export const MainLayout = () => {
   const [showSettings, setShowSettings] = useState(false);
@@ -60,9 +160,9 @@ export const MainLayout = () => {
     matchedWords,
   } = useScript();
 
-  // Voice processing callback
+  // Voice processing callback - UPDATED to handle session state
   const handleTextProcessed = useCallback(
-    (recognizedText, confidence) => {
+    (recognizedText, confidence, sessionState = {}) => {
       if (!recognizedText || confidence < settings.confidenceThreshold) return;
 
       const result = TextProcessor.processRecognizedText(
@@ -72,18 +172,30 @@ export const MainLayout = () => {
         settings.confidenceThreshold
       );
 
-      updateProgress(result.matchedWords, result.progress);
-      updateStats(result.progress, result.recognizedWords, result.totalWords);
+      // اگر در حال resume هستیم، از پیشرفت قبلی شروع کن
+      let adjustedProgress = result.progress;
+      if (sessionState.isResuming && sessionState.sectionProgress > 0) {
+        adjustedProgress = Math.max(
+          result.progress,
+          sessionState.sectionProgress
+        );
+        console.log(
+          `ادامه از پیشرفت قبلی: ${sessionState.sectionProgress}% -> ${adjustedProgress}%`
+        );
+      }
+
+      updateProgress(result.matchedWords, adjustedProgress);
+      updateStats(adjustedProgress, result.recognizedWords, result.totalWords);
 
       // Auto-advance logic
       if (
         settings.autoAdvance &&
-        result.progress >= settings.autoAdvanceThreshold
+        adjustedProgress >= settings.autoAdvanceThreshold
       ) {
         setTimeout(() => {
           goToNextSection();
           completeSection();
-          showSuccess("پیشرفت خوب! به بخش بعدی می‌رویم 🎉");
+          showSuccess("پیشرفت عالی! به بخش بعدی می‌رویم 🎉");
         }, 2000);
       }
 
@@ -93,6 +205,13 @@ export const MainLayout = () => {
         if ("vibrate" in navigator) {
           navigator.vibrate(100);
         }
+      }
+
+      // نمایش پیشرفت برای کاربر
+      if (result.matchedWords.length > 0) {
+        showSuccess(
+          `${result.matchedWords.length} کلمه تطبیق یافت! پیشرفت: ${Math.round(adjustedProgress)}%`
+        );
       }
     },
     [
@@ -106,14 +225,23 @@ export const MainLayout = () => {
     ]
   );
 
-  // Voice streaming
+  // Voice streaming with enhanced settings
   const {
     isRecording,
     transcript,
+    sessionState,
     startRecording,
     stopRecording,
+    resumeRecording,
     handleLanguageChange,
-  } = useVoiceStreamer(settings, handleTextProcessed);
+  } = useVoiceStreamer(
+    {
+      ...settings,
+      autoResume: settings.autoResume || false,
+      silenceThreshold: settings.silenceThreshold || 3000,
+    },
+    handleTextProcessed
+  );
 
   const handleSettingsOpen = () => setShowSettings(true);
   const handleStatsOpen = () => setShowStats(true);
@@ -159,17 +287,32 @@ export const MainLayout = () => {
               {/* Script Header */}
               <ScriptHeader />
 
+              {/* NEW: Enhanced Recording Status */}
+              <RecordingStatusIndicator
+                isRecording={isRecording}
+                sessionState={sessionState}
+                onResume={resumeRecording}
+              />
+
               {/* Recording Status */}
               <RecordingIndicator
                 isRecording={isRecording}
                 transcript={transcript}
+                sessionState={sessionState}
               />
 
               {/* Progress Indicators */}
-              <ProgressBars />
+              <ProgressBars
+                showSessionProgress={true}
+                sessionState={sessionState}
+              />
 
               {/* Main Script Content */}
-              <ScriptContent />
+              <ScriptContent
+                onStartRecording={startRecording}
+                onStopRecording={stopRecording}
+                isRecording={isRecording}
+              />
 
               {/* Focus Mode Toggle */}
               <Box
@@ -181,122 +324,43 @@ export const MainLayout = () => {
                   transition: "all 0.3s ease",
                   zIndex: 1200,
                   opacity: focusMode ? 1 : 0.7,
-                  "&:hover": { opacity: 1, right: 16 },
                 }}
               >
-                <Box
+                <FloatingActionButton
                   onClick={toggleFocusMode}
-                  sx={{
-                    p: 1,
-                    bgcolor: "primary.main",
-                    color: "primary.contrastText",
-                    borderRadius: "12px 0 0 12px",
-                    cursor: "pointer",
-                    writingMode: "vertical-lr",
-                    textOrientation: "mixed",
-                    fontSize: "0.75rem",
-                    fontWeight: "bold",
-                    boxShadow: 3,
-                    "&:hover": {
-                      bgcolor: "primary.dark",
-                    },
-                  }}
+                  color={focusMode ? "secondary" : "primary"}
+                  size="small"
+                  title={focusMode ? "خروج از حالت تمرکز" : "حالت تمرکز"}
                 >
-                  {focusMode ? "نمایش کامل" : "حالت تمرکز"}
-                </Box>
+                  {focusMode ? "👁️" : "🎯"}
+                </FloatingActionButton>
               </Box>
             </Box>
           </Grid>
-
-          {/* Mobile Sidebar - Bottom Sheet Style */}
-          {isMobile && sidebarOpen && (
-            <Box
-              sx={{
-                position: "fixed",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: "60vh",
-                bgcolor: "background.paper",
-                borderRadius: "20px 20px 0 0",
-                zIndex: 1300,
-                p: 2,
-                overflow: "auto",
-                boxShadow: 24,
-                transform: sidebarOpen ? "translateY(0)" : "translateY(100%)",
-                transition: "transform 0.3s ease",
-              }}
-              className="custom-scrollbar"
-            >
-              <Box
-                sx={{
-                  width: 40,
-                  height: 4,
-                  bgcolor: "divider",
-                  borderRadius: 2,
-                  mx: "auto",
-                  mb: 2,
-                }}
-              />
-
-              <LiveTranscript
-                transcript={transcript}
-                isRecording={isRecording}
-                matchedWords={Array.from(matchedWords)}
-              />
-              <NavigationPanel />
-              <QuickStats />
-              <QuickActions onNotification={showSuccess} onError={showError} />
-            </Box>
-          )}
-
-          {/* Mobile Overlay */}
-          {isMobile && sidebarOpen && (
-            <Box
-              sx={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                bgcolor: "rgba(0, 0, 0, 0.5)",
-                zIndex: 1200,
-              }}
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
         </Grid>
       </Container>
-
-      {/* Floating Action Button */}
-      <FloatingActionButton
-        isRecording={isRecording}
-        onStartRecording={() => {
-          startRecording();
-          showSuccess("ضبط آغاز شد 🎙️");
-        }}
-        onStopRecording={() => {
-          stopRecording();
-          showSuccess("ضبط متوقف شد");
-        }}
-      />
 
       {/* Dialogs */}
       <SettingsDialog
         open={showSettings}
         onClose={() => setShowSettings(false)}
-        onLanguageChange={handleLanguageChange}
       />
 
       <StatsDialog open={showStats} onClose={() => setShowStats(false)} />
 
       {/* Notifications */}
       <NotificationSnackbar
-        notification={notification}
-        showNotification={showNotification}
-        error={error}
-        onHideNotification={hideNotification}
-        onHideError={hideError}
+        open={!!notification}
+        message={notification}
+        severity="success"
+        onClose={hideNotification}
+      />
+
+      <NotificationSnackbar
+        open={!!error}
+        message={error}
+        severity="error"
+        onClose={hideError}
       />
     </Box>
   );

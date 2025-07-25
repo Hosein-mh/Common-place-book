@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Button, Snackbar, Alert, Box } from '@mui/material';
-import { GetApp, Close } from '@mui/icons-material';
+import React, { useState, useEffect } from "react";
+import { Button, Snackbar, Alert, Box } from "@mui/material";
+import GetAppIcon from "@mui/icons-material/GetApp";
+import CloseIcon from "@mui/icons-material/Close";
 
 export const PWAInstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -13,10 +14,13 @@ export const PWAInstallPrompt = () => {
       setShowPrompt(true);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt
+      );
     };
   }, []);
 
@@ -25,11 +29,11 @@ export const PWAInstallPrompt = () => {
 
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      console.log('PWA installed');
+
+    if (outcome === "accepted") {
+      console.log("PWA installed");
     }
-    
+
     setDeferredPrompt(null);
     setShowPrompt(false);
   };
@@ -44,27 +48,23 @@ export const PWAInstallPrompt = () => {
   return (
     <Snackbar
       open={showPrompt}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       autoHideDuration={null}
     >
       <Alert
         severity="info"
         action={
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button 
-              color="inherit" 
-              size="small" 
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              color="inherit"
+              size="small"
               onClick={handleInstall}
-              startIcon={<GetApp />}
+              startIcon={<GetAppIcon />}
             >
               نصب
             </Button>
-            <Button 
-              color="inherit" 
-              size="small" 
-              onClick={handleDismiss}
-            >
-              <Close />
+            <Button color="inherit" size="small" onClick={handleDismiss}>
+              <CloseIcon />
             </Button>
           </Box>
         }
